@@ -1,8 +1,6 @@
 import { Platform } from 'react-native';
 import { ChatMessage, CartItem, UserProfile } from '../types';
 
-// Web (browser on same machine) → localhost
-// Native (physical device via Tailscale or tunnel) → Tailscale/LAN IP
 const API_BASE = Platform.OS === 'web'
   ? 'http://localhost:3001'
   : 'http://100.64.155.208:3001';
@@ -18,62 +16,76 @@ export const fetchMenu = async () => {
   }
 };
 
-export const streamChat = async (
+// XHR instead of fetch: React Native's XMLHttpRequest is native and its
+// onprogress callback handles SSE reliably on Android. fetch().body.getReader()
+// returns null on Android Hermes and loses partial chunks on all platforms.
+export const streamChat = (
   messages: ChatMessage[],
   cart: CartItem[],
   profile: UserProfile,
   onChunk: (text: string) => void,
   onDone: () => void,
-  onError: (err: string) => void
-) => {
-  try {
-    const formattedMessages = messages.map(m => ({
-      role: m.role,
-      content: m.content
-    }));
+  onError: (err: string) => void,
+): Promise<void> => {
+  return new Promise((resolve) => {
+    const xhr     = new XMLHttpRequest();
+    let buffer    = '';
+    let lastPos   = 0;
+    let settled   = false;
 
-    const response = await fetch(`${API_BASE}/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: formattedMessages, cart, profile })
-    });
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      fn();
+      resolve();
+    };
 
-    if (!response.body) throw new Error('No readable stream');
+    const flush = () => {
+      // Split on SSE event boundary; keep any trailing incomplete chunk in buffer
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() ?? '';
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+      for (const event of parts) {
+        const line = event.trim();
+        if (!line || line === ':keep-alive') continue;
+        if (!line.startsWith('data: ')) continue;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const text = decoder.decode(value);
-      const events = text.split('\n\n').filter(Boolean);
-
-      for (const event of events) {
-        if (event === ':keep-alive') continue;
-        if (event.startsWith('data: ')) {
-          const jsonStr = event.slice('data: '.length);
-          try {
-            const parsed = JSON.parse(jsonStr);
-            if (parsed.error) {
-              onError(parsed.error);
-              return;
-            }
-            if (parsed.done) {
-              onDone();
-              return;
-            }
-            if (parsed.text) {
-              onChunk(parsed.text);
-            }
-          } catch (e) {
-            console.error('JSON parse error on SSE chunk:', e, jsonStr);
-          }
+        const jsonStr = line.slice(6).trim();
+        try {
+          const parsed = JSON.parse(jsonStr);
+          if (parsed.error) { settle(() => onError(parsed.error)); return; }
+          if (parsed.done)  { settle(onDone); return; }
+          if (parsed.text)  { onChunk(parsed.text); }
+        } catch {
+          console.warn('SSE parse — skipped partial chunk');
         }
       }
-    }
-  } catch (err: any) {
-    onError(err.message);
-  }
+    };
+
+    xhr.open('POST', `${API_BASE}/chat`);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 90_000;
+
+    xhr.onprogress = () => {
+      const fresh = xhr.responseText.slice(lastPos);
+      lastPos     = xhr.responseText.length;
+      buffer     += fresh;
+      flush();
+    };
+
+    xhr.onload = () => {
+      buffer += '\n\n'; // ensure trailing event gets flushed
+      flush();
+      settle(onDone);
+    };
+
+    xhr.onerror   = () => settle(() => onError('Cannot reach server — is the API running?'));
+    xhr.ontimeout = () => settle(() => onError('Request timed out.'));
+
+    xhr.send(JSON.stringify({
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
+      cart,
+      profile,
+    }));
+  });
 };

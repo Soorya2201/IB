@@ -21,7 +21,6 @@ const EMOJI_MAP: Record<string, string> = {
   'sparkling-water':     '💧',
   'large-water':         '🫗',
   'bbq-burger':          '🥩',
-  'cheese-fries':        '🧀',
 };
 
 export function useStreamParser() {

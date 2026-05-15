@@ -12,7 +12,6 @@ interface MenuCardProps {
   index?: number;
 }
 
-// Static map — require() paths must be literals for Metro to bundle them
 const ITEM_IMAGES: Record<string, any> = {
   // Burgers
   'classic-burger':      require('../../../../../assets/Classic Bistro Burger.jpeg'),
@@ -44,11 +43,15 @@ export default function MenuCard({ item, index = 0 }: MenuCardProps) {
   const addItem        = useStore(s => s.addItem);
   const updateQuantity = useStore(s => s.updateQuantity);
   const cartItems      = useStore(s => s.items);
-  const qty            = cartItems.find(i => i.menuItem.id === item.id)?.quantity ?? 0;
+  const toggleLike     = useStore(s => s.toggleLike);
+  const isLiked        = useStore(s => s.isLiked(item.id));
+
+  const qty = cartItems.find(i => i.menuItem.id === item.id)?.quantity ?? 0;
 
   const handleAdd      = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); addItem(item, 1); };
   const handleIncrease = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); updateQuantity(item.id, qty + 1); };
   const handleDecrease = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); updateQuantity(item.id, qty - 1); };
+  const handleLike     = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleLike(item); };
 
   const photo = ITEM_IMAGES[item.id];
 
@@ -64,12 +67,18 @@ export default function MenuCard({ item, index = 0 }: MenuCardProps) {
           <View style={styles.heroImage}>
             <Image source={photo} style={styles.image} resizeMode="cover" />
             <View style={styles.imageAccent} />
+            <TouchableOpacity style={styles.heartBtn} onPress={handleLike} activeOpacity={0.75}>
+              <Feather name="heart" size={14} color={isLiked ? COLORS.danger : '#fff'} />
+            </TouchableOpacity>
           </View>
         ) : (
           <>
             <View style={styles.accent} />
             <View style={styles.heroEmoji}>
               <Text style={styles.emoji}>{item.image}</Text>
+              <TouchableOpacity style={styles.heartBtnEmoji} onPress={handleLike} activeOpacity={0.75}>
+                <Feather name="heart" size={14} color={isLiked ? COLORS.danger : COLORS.medGray} />
+              </TouchableOpacity>
             </View>
           </>
         )}
@@ -143,18 +152,31 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0,
     height: 3, backgroundColor: COLORS.bistroGold,
   },
+  heartBtn: {
+    position: 'absolute', top: 10, right: 10,
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   // ── Emoji hero ───────────────────────────────────────────────
-  accent:    { height: 3, backgroundColor: COLORS.bistroGold },
-  heroEmoji: { backgroundColor: COLORS.bistroCream, paddingVertical: 18, alignItems: 'center', justifyContent: 'center' },
-  emoji:     { fontSize: 48, lineHeight: 56 },
+  accent:        { height: 3, backgroundColor: COLORS.bistroGold },
+  heroEmoji: {
+    backgroundColor: COLORS.bistroCream, paddingVertical: 18,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  emoji:         { fontSize: 48, lineHeight: 56 },
+  heartBtnEmoji: {
+    position: 'absolute', top: 8, right: 10,
+    padding: 6,
+  },
 
   // ── Body ─────────────────────────────────────────────────────
-  body: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 6 },
-  name: { fontSize: 13, fontWeight: '700', color: COLORS.bistroBrown, lineHeight: 18, marginBottom: 4 },
-  desc: { fontSize: 11, color: COLORS.medGray, lineHeight: 15, marginBottom: 7 },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 4 },
-  tag:  { borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2 },
+  body:    { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 6 },
+  name:    { fontSize: 13, fontWeight: '700', color: COLORS.bistroBrown, lineHeight: 18, marginBottom: 4 },
+  desc:    { fontSize: 11, color: COLORS.medGray, lineHeight: 15, marginBottom: 7 },
+  tags:    { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 4 },
+  tag:     { borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2 },
   tagText: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
 
   // ── Footer ───────────────────────────────────────────────────

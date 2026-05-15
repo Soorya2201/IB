@@ -1,7 +1,5 @@
 import React from 'react';
-import {
-  View, Text, ScrollView, SafeAreaView, StyleSheet,
-} from 'react-native';
+import { View, Text, ScrollView, SafeAreaView, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useStore } from '../store';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
@@ -10,24 +8,21 @@ function formatDate(iso: string) {
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
-
 function formatTime(iso: string) {
   const d = new Date(iso);
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
 export default function ProfileScreen() {
-  const orderHistory  = useStore(s => s.orderHistory);
-  const getFavorites  = useStore(s => s.getFavoriteItems);
-  const restrictions  = useStore(s => s.restrictions);
-
-  const favorites = getFavorites();
+  const orderHistory = useStore(s => s.orderHistory);
+  const likedItems   = useStore(s => s.likedItems);
+  const restrictions = useStore(s => s.restrictions);
 
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Avatar + greeting */}
+        {/* Avatar */}
         <View style={styles.avatarSection}>
           <View style={styles.avatarCircle}>
             <Feather name="user" size={40} color={COLORS.bistroCream} />
@@ -44,23 +39,21 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Most ordered */}
+        {/* Liked items */}
         <Section title="Your Favourites" icon="heart">
-          {favorites.length === 0 ? (
-            <EmptyHint text="Order something delicious to see your favourites here." />
+          {likedItems.length === 0 ? (
+            <EmptyHint text="Tap the heart on any menu item to save your favourites here." />
           ) : (
-            favorites.slice(0, 5).map((f, i) => (
-              <View key={f.menuItem.id} style={styles.favRow}>
-                <View style={styles.favRank}>
-                  <Text style={styles.favRankText}>{i + 1}</Text>
+            likedItems.map(item => (
+              <View key={item.id} style={styles.favRow}>
+                <View style={styles.favEmoji}>
+                  <Text style={styles.favEmojiText}>{item.image}</Text>
                 </View>
                 <View style={styles.favInfo}>
-                  <Text style={styles.favName}>{f.menuItem.name}</Text>
-                  <Text style={styles.favSub}>${f.menuItem.price.toFixed(2)}</Text>
+                  <Text style={styles.favName}>{item.name}</Text>
+                  <Text style={styles.favSub}>${item.price.toFixed(2)}</Text>
                 </View>
-                <View style={styles.favBadge}>
-                  <Text style={styles.favBadgeText}>×{f.timesOrdered}</Text>
-                </View>
+                <Feather name="heart" size={14} color={COLORS.danger} />
               </View>
             ))
           )}
@@ -82,9 +75,7 @@ export default function ProfileScreen() {
                   <View key={menuItem.id} style={styles.orderLine}>
                     <Text style={styles.orderLineQty}>×{quantity}</Text>
                     <Text style={styles.orderLineName}>{menuItem.name}</Text>
-                    <Text style={styles.orderLinePrice}>
-                      ${(menuItem.price * quantity).toFixed(2)}
-                    </Text>
+                    <Text style={styles.orderLinePrice}>${(menuItem.price * quantity).toFixed(2)}</Text>
                   </View>
                 ))}
               </View>
@@ -118,22 +109,19 @@ function EmptyHint({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.bistroCream },
+  root:   { flex: 1, backgroundColor: COLORS.bistroCream },
   scroll: { padding: SPACING.md, paddingBottom: SPACING.xl * 2 },
 
-  // Avatar
   avatarSection: { alignItems: 'center', paddingVertical: SPACING.lg },
   avatarCircle: {
     width: 84, height: 84, borderRadius: 42,
     backgroundColor: COLORS.bistroBrown,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: COLORS.bistroBrown,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25, shadowRadius: 8,
-    elevation: 6,
+    shadowColor: COLORS.bistroBrown, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25, shadowRadius: 8, elevation: 6,
   },
   greeting: { ...TYPOGRAPHY.subheading, marginTop: SPACING.md },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: SPACING.sm },
+  tagsRow:  { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: SPACING.sm },
   tag: {
     backgroundColor: COLORS.bistroGold + '22',
     borderWidth: 1, borderColor: COLORS.bistroGold,
@@ -142,7 +130,6 @@ const styles = StyleSheet.create({
   },
   tagText: { fontSize: 12, color: COLORS.bistroGold, fontWeight: '600' },
 
-  // Section
   section: { marginTop: SPACING.lg },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -152,7 +139,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { ...TYPOGRAPHY.subheading, fontSize: 15 },
 
-  // Favourites
   favRow: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.card,
@@ -162,24 +148,12 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4,
     shadowOffset: { width: 0, height: 1 }, elevation: 1,
   },
-  favRank: {
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: COLORS.bistroGold,
-    alignItems: 'center', justifyContent: 'center',
-    marginRight: SPACING.sm,
-  },
-  favRankText: { fontSize: 13, fontWeight: '700', color: COLORS.white },
-  favInfo: { flex: 1 },
-  favName: { fontSize: 14, fontWeight: '600', color: COLORS.bistroBrown },
-  favSub: { fontSize: 12, color: COLORS.medGray, marginTop: 2 },
-  favBadge: {
-    backgroundColor: COLORS.bistroCream2,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: 10, paddingVertical: 3,
-  },
-  favBadgeText: { fontSize: 13, fontWeight: '700', color: COLORS.bistroBrown },
+  favEmoji:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: SPACING.sm },
+  favEmojiText: { fontSize: 24 },
+  favInfo:      { flex: 1 },
+  favName:      { fontSize: 14, fontWeight: '600', color: COLORS.bistroBrown },
+  favSub:       { fontSize: 12, color: COLORS.medGray, marginTop: 2 },
 
-  // Order history
   orderCard: {
     backgroundColor: COLORS.card,
     borderRadius: RADIUS.md,
@@ -190,19 +164,17 @@ const styles = StyleSheet.create({
   },
   orderCardHeader: {
     flexDirection: 'row', alignItems: 'center',
-    marginBottom: SPACING.sm,
-    paddingBottom: SPACING.xs,
+    marginBottom: SPACING.sm, paddingBottom: SPACING.xs,
     borderBottomWidth: 0.5, borderBottomColor: COLORS.border,
   },
-  orderDate: { fontSize: 13, fontWeight: '600', color: COLORS.bistroBrown, flex: 1 },
-  orderTime: { fontSize: 12, color: COLORS.medGray, marginRight: SPACING.sm },
-  orderTotal: { fontSize: 14, fontWeight: '700', color: COLORS.bistroGold },
-  orderLine: { flexDirection: 'row', alignItems: 'center', paddingVertical: 3 },
-  orderLineQty: { fontSize: 13, color: COLORS.medGray, width: 28 },
-  orderLineName: { flex: 1, fontSize: 13, color: COLORS.bistroBrown },
+  orderDate:      { fontSize: 13, fontWeight: '600', color: COLORS.bistroBrown, flex: 1 },
+  orderTime:      { fontSize: 12, color: COLORS.medGray, marginRight: SPACING.sm },
+  orderTotal:     { fontSize: 14, fontWeight: '700', color: COLORS.bistroGold },
+  orderLine:      { flexDirection: 'row', alignItems: 'center', paddingVertical: 3 },
+  orderLineQty:   { fontSize: 13, color: COLORS.medGray, width: 28 },
+  orderLineName:  { flex: 1, fontSize: 13, color: COLORS.bistroBrown },
   orderLinePrice: { fontSize: 13, fontWeight: '600', color: COLORS.darkGray },
 
-  // Empty
-  emptyHint: { padding: SPACING.md, alignItems: 'center' },
+  emptyHint:     { padding: SPACING.md, alignItems: 'center' },
   emptyHintText: { ...TYPOGRAPHY.small, textAlign: 'center' },
 });

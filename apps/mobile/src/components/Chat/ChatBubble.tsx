@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle, withTiming, useSharedValue,
-  FadeInDown,
+  FadeInDown, withDelay, withRepeat, withSequence,
 } from 'react-native-reanimated';
 import Markdown from 'react-native-markdown-display';
 import { COLORS } from '../../constants/theme';
@@ -21,14 +21,17 @@ function Dot({ delay }: { delay: number }) {
   const translateY = useSharedValue(0);
 
   useEffect(() => {
-    const loop = () => {
-      setTimeout(() => {
-        translateY.value = withTiming(-5, { duration: 300 }, () => {
-          translateY.value = withTiming(0, { duration: 300 }, loop);
-        });
-      }, delay);
-    };
-    loop();
+    translateY.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(-5, { duration: 300 }),
+          withTiming(0,  { duration: 300 }),
+        ),
+        -1,   // infinite
+        false,
+      ),
+    );
   }, []);
 
   const style = useAnimatedStyle(() => ({

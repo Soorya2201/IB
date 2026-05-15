@@ -130,18 +130,6 @@
           ],
           "pairings": [],
           "image": "\ud83e\uddc5"
-        },
-        {
-          "id": "cheese-fries",
-          "name": "Loaded Cheese Fries",
-          "price": 9.0,
-          "description": "Crispy fries, melted cheddar sauce, pickled jalape\u00f1os, sour cream",
-          "dietary": [
-            "vegetarian",
-            "gluten"
-          ],
-          "pairings": [],
-          "image": "\ud83e\uddc0"
         }
       ]
     },

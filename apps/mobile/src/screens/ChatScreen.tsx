@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useStore } from '../store';
 import ChatList from '../components/Chat/ChatList';
 import QuickReplyChips from '../components/Chat/QuickReplyChips';
@@ -43,7 +44,8 @@ function CartHeaderButton({ onPress }: { onPress: () => void }) {
 }
 
 export default function ChatScreen() {
-  const navigation = useNavigation<any>();
+  const navigation   = useNavigation<any>();
+  const headerHeight = useHeaderHeight();
   const [cartVisible, setCartVisible] = useState(false);
   const [textInput, setTextInput]     = useState('');
 
@@ -65,7 +67,7 @@ export default function ChatScreen() {
   const speechRef = useRef<SpeechWebViewRef>(null);
 
   const {
-    isListening, transcript, startListening, stopListening,
+    isListening, transcript, startListening, stopListening, error: voiceError,
     onSpeechResult, onSpeechEnd, onSpeechError,
   } = useVoiceInput(
     (finalText) => { if (finalText.trim()) handleSend(finalText); },
@@ -191,7 +193,7 @@ export default function ChatScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior="padding"
-        keyboardVerticalOffset={Platform.OS === 'android' ? 25 : 0}
+        keyboardVerticalOffset={headerHeight}
       >
 
         <View style={{ flex: 1 }}>
@@ -203,6 +205,10 @@ export default function ChatScreen() {
         )}
 
         <View style={styles.inputZone}>
+
+          {voiceError ? (
+            <Text style={styles.voiceError} numberOfLines={2}>{voiceError}</Text>
+          ) : null}
 
           <Animated.View style={{ height: waveBarHeight, overflow: 'hidden' }}>
             <WaveBar isActive={isListening} mode="user" />
@@ -286,6 +292,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingTop: 10,
     paddingBottom: Platform.OS === 'ios' ? 12 : 14,
     backgroundColor: COLORS.bistroCream,
+  },
+  voiceError: {
+    fontSize: 12, color: COLORS.danger, marginBottom: 6,
+    paddingHorizontal: 4, lineHeight: 16,
   },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   micWrap: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
