@@ -3,7 +3,7 @@
 > **A full-stack AI-powered food ordering experience — order by voice, text, or tap.**
 
 ![CI](https://github.com/Soorya2201/Intelligent-Bistro/actions/workflows/ci.yml/badge.svg)
-![Tests](https://img.shields.io/badge/tests-102%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-105%20passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-lightgrey)
 
@@ -17,14 +17,38 @@ It is a production-grade monorepo with a React Native mobile app, a Node.js stre
 
 ---
 
-## Screenshots
+## See It In Action
+
+### The AI Conversation — Web
+
+<div align="center">
+  <img src="assets/Desktop-Screenshot_1.png" width="49%" alt="AI answering price queries and building the cart"/>
+  <img src="assets/Desktop-screenshot_2.png" width="49%" alt="AI handling edge cases and modifying the order"/>
+  <br/><br/>
+  <em>
+    Left — the AI answers price queries, explains the menu, and builds the cart in plain English.<br/>
+    Right — it gracefully deflects off-topic questions, doubles a line item on request, and tracks the running total.
+  </em>
+</div>
+
+<br/>
+
+### The Full Mobile Experience — Android
+
+<div align="center">
+  <img src="assets/mobile_screenshot_1.jpg" width="16%" alt="Menu — Burgers"/>
+  <img src="assets/mobile_screenshot_2.jpg" width="16%" alt="Menu — Sides"/>
+  <img src="assets/mobile_screenshot_3.jpg" width="16%" alt="Cart sheet open"/>
+  <img src="assets/mobile_screenshot_4.jpg" width="16%" alt="Checkout receipt"/>
+  <img src="assets/mobile_screenshot_5.jpg" width="16%" alt="Order confirmed"/>
+  <img src="assets/mobile_screenshot_6.jpg" width="16%" alt="Profile and order history"/>
+</div>
 
 <div align="center">
 
-| Desktop (Web) | Mobile (Android) |
-|:---:|:---:|
-| <img src="apps/mobile/assets/screenshot-desktop.png" width="480"/> | <img src="apps/mobile/assets/screenshot-mobile.png" width="220"/> |
-| *Full conversation flow in browser* | *Live ordering on Android* |
+| Browse Burgers | Browse Sides | Live Cart | Checkout | Confirmed | History |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| Category tabs + rich food photography | Dietary tags on every item | Pairing chips, running total | AI-narrated itemised receipt | Order placed | Favourites + full order history |
 
 </div>
 
@@ -154,12 +178,12 @@ Intelligent-Bistro/
 
 ## Test Suite
 
-**102 tests across 6 suites — all passing.**
+**105 tests across 6 suites — all passing.**
 
 | Suite | Tests | What it covers |
 |---|---|---|
 | `menu.schema.test.ts` | 12 | Menu JSON structure, required fields, price validity |
-| `anthropic.test.ts` | 17 | System prompt generation, cart/profile injection |
+| `anthropic.test.ts` | 20 | System prompt generation, cart/profile injection, format normalisation |
 | `streamParser.test.ts` | 18 | Sentinel parsing, split-chunk edge cases, malformed JSON |
 | `cartSlice.test.ts` | 22 | Add, remove, update, clear, quantity merge, totals |
 | `chatSlice.test.ts` | 19 | Message append, streaming state, quick replies |
