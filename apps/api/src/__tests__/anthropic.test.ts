@@ -37,7 +37,7 @@ describe('buildSystemPrompt — cart section', () => {
     expect(prompt).toContain('cart is currently empty');
   });
 
-  it('includes cart item names when cart is populated', () => {
+  it('includes cart item names when cart is populated (UI format)', () => {
     const cart = [
       { menuItem: { id: 'classic-burger', name: 'Classic Bistro Burger', price: 14.5 }, quantity: 2 },
     ];
@@ -51,6 +51,35 @@ describe('buildSystemPrompt — cart section', () => {
     ];
     const prompt = buildSystemPrompt(cart, emptyProfile, menuData);
     expect(prompt).not.toContain('cart is currently empty');
+  });
+
+  it('normalises UI cart format to flat {id,name,qty,price} so the AI reads it correctly', () => {
+    const cart = [
+      { menuItem: { id: 'classic-burger', name: 'Classic Bistro Burger', price: 14.5 }, quantity: 2 },
+    ];
+    const prompt = buildSystemPrompt(cart, emptyProfile, menuData);
+    // The AI should see flat format matching its action schema, not nested menuItem objects
+    expect(prompt).toContain('"qty":2');
+    expect(prompt).toContain('"id":"classic-burger"');
+    expect(prompt).not.toContain('"menuItem"');
+  });
+
+  it('shows order total when cart has items', () => {
+    const cart = [
+      { menuItem: { id: 'classic-burger', name: 'Classic Bistro Burger', price: 14.5 }, quantity: 2 },
+    ];
+    const prompt = buildSystemPrompt(cart, emptyProfile, menuData);
+    expect(prompt).toContain('Order total: $29.00');
+  });
+
+  it('also handles flat cart format (AI-added items round-trip)', () => {
+    const cart = [
+      { id: 'truffle-fries', name: 'Truffle Fries', qty: 1, price: 8.5 },
+    ];
+    const prompt = buildSystemPrompt(cart, emptyProfile, menuData);
+    expect(prompt).toContain('Truffle Fries');
+    expect(prompt).toContain('"qty":1');
+    expect(prompt).not.toContain('"menuItem"');
   });
 });
 

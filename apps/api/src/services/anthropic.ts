@@ -7,6 +7,25 @@ export const anthropicClient = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 });
 
+function formatCart(cart: any[]): string {
+  if (!cart || !Array.isArray(cart) || cart.length === 0) {
+    return 'The cart is currently empty.';
+  }
+
+  // Normalise both cart formats into the flat {id,name,qty,price} schema the AI uses:
+  //   UI format:  { menuItem: { id, name, price, ... }, quantity: N }
+  //   AI format:  { id, name, qty, price }
+  const items = cart.map((item: any) => {
+    if (item.menuItem) {
+      return { id: item.menuItem.id, name: item.menuItem.name, qty: item.quantity, price: item.menuItem.price };
+    }
+    return { id: item.id, name: item.name, qty: item.qty ?? item.quantity ?? 1, price: item.price };
+  });
+
+  const total = items.reduce((sum: number, i: any) => sum + (i.price || 0) * (i.qty || 0), 0);
+  return `${JSON.stringify(items)}\nOrder total: $${total.toFixed(2)}`;
+}
+
 export function buildSystemPrompt(cart: any, profile: any, menu: any): string {
   return `You are Bistro, a warm, witty, and helpful AI ordering assistant for The
 Intelligent Bistro restaurant. You have a friendly, slightly playful tone —
@@ -16,7 +35,7 @@ like a knowledgeable waiter who genuinely wants you to have a great meal.
 ${JSON.stringify(menu, null, 2)}
 
 === CURRENT CART ===
-${cart && cart.length > 0 ? JSON.stringify(cart) : "The cart is currently empty."}
+${formatCart(cart)}
 
 === USER DIETARY PROFILE ===
 Restrictions remembered this session: ${profile && profile.restrictions && profile.restrictions.length > 0 ? profile.restrictions.join(', ') : "None stated"}
