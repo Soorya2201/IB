@@ -4,12 +4,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 export const anthropicClient = new Anthropic({
-  apiKey: process.env.OPENROUTER_API_KEY || '',
-  baseURL: 'https://openrouter.ai/api/v1',
-  defaultHeaders: {
-    'HTTP-Referer': 'https://intelligentbistro.app',
-    'X-Title': 'Intelligent Bistro',
-  },
+  apiKey: process.env.ANTHROPIC_API_KEY || '',
 });
 
 export function buildSystemPrompt(cart: any, profile: any, menu: any): string {

@@ -1,11 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, SafeAreaView, TouchableOpacity, Text, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useStore } from '../store';
 import OrderRecap from '../components/Checkout/OrderRecap';
 import { streamChat } from '../services/api';
 import { useTTS } from '../hooks/useTTS';
-import { createStreamParser } from '../utils/streamParser';
 import { COLORS, SPACING, RADIUS } from '../constants/theme';
 import * as Haptics from 'expo-haptics';
 
@@ -20,11 +19,10 @@ export default function CheckoutScreen() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   
   const { speak, stop } = useTTS();
-  const parserRef = useRef(createStreamParser());
 
   useEffect(() => {
+    // Kick off narration
     let currentNarration = '';
-    parserRef.current.reset();
     const messages = [
       { id: '1', role: 'user' as const, content: 'Please narrate my current order naturally before I confirm. Cart: ' + JSON.stringify(cartItems), timestamp: new Date() }
     ];
@@ -34,16 +32,19 @@ export default function CheckoutScreen() {
       cartItems,
       { restrictions: [] },
       (chunk) => {
-        const { visibleText } = parserRef.current.processChunk(chunk);
-        currentNarration += visibleText;
+        // Here we just append directly since we are not doing sentinel parsing for the narration
+        // Wait, the AI might still send sentinels. Let's filter them out.
+        const cleaned = chunk.replace(/✦ACTION✦.*?✦END✦/gs, '');
+        currentNarration += cleaned;
         setNarration(currentNarration);
       },
       () => {
+        // Stream done
         speak(currentNarration);
       },
-      () => {
-        setNarration('Ready to place your order?');
-        speak('Ready to place your order?');
+      (err) => {
+        setNarration("Ready to place your order?");
+        speak("Ready to place your order?");
       }
     );
 

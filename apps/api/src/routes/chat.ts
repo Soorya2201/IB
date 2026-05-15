@@ -14,7 +14,7 @@ router.post('/', async (req, res) => {
 
   try {
     const stream = await anthropicClient.messages.stream({
-      model: 'anthropic/claude-3.5-sonnet',
+      model: 'claude-sonnet-4-5',
       max_tokens: 1000,
       system: systemPrompt,
       messages: messages
