@@ -80,7 +80,10 @@ export default function CartSheet({ onClose }: { onClose: () => void }) {
         {/* Footer */}
         <View style={styles.footer}>
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>TOTAL</Text>
+            <View>
+              <Text style={styles.totalLabel}>SUBTOTAL</Text>
+              <Text style={styles.taxNote}>+ 10% tax at checkout</Text>
+            </View>
             <Text style={styles.totalAmount}>${total.toFixed(2)}</Text>
           </View>
           <TouchableOpacity
@@ -167,6 +170,10 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 12, color: COLORS.medGray,
     letterSpacing: 0.8, textTransform: 'uppercase',
+  },
+  taxNote: {
+    fontSize: 11, color: COLORS.medGray,
+    marginTop: 2, opacity: 0.7,
   },
   totalAmount: {
     fontSize: 22, fontWeight: '700',

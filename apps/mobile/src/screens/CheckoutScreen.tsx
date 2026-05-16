@@ -75,7 +75,7 @@ export default function CheckoutScreen() {
       {
         id: '1',
         role: 'user' as const,
-        content: 'Please narrate my current order naturally before I confirm it.',
+        content: 'Summarise my order in one short punchy sentence — max 12 words, no lists, no prices. Just confirm what I got and make it feel good.',
         timestamp: new Date(),
       },
     ];
@@ -114,9 +114,9 @@ export default function CheckoutScreen() {
 
     // Try to persist order to backend
     try {
-      const subtotal = getTotal();
-      const tax      = subtotal * 0.1;
-      const total    = subtotal + tax;
+      const subtotal = Math.round(getTotal() * 100) / 100;
+      const tax      = Math.round(subtotal * 0.1 * 100) / 100;
+      const total    = Math.round((subtotal + tax) * 100) / 100;
       const result   = await placeOrder({
         sessionId: SESSION_ID,
         items: cartItems.map(c => ({
@@ -217,7 +217,7 @@ export default function CheckoutScreen() {
         <ScrollView contentContainerStyle={{ padding: SPACING.md, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           <OrderRecap narrationText={narration} />
 
-          {/* Receipt opt-in card */}
+          {/* Email receipt opt-in */}
           <View style={styles.receiptCard}>
             <TouchableOpacity
               style={styles.receiptRow}
