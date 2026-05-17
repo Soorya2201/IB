@@ -106,7 +106,7 @@ router.post('/', async (req, res) => {
     const startTime = Date.now();
 
     // ─── PHASE 1: Agentic tool resolution (non-streaming, up to 5 rounds) ──
-    const MAX_TOOL_ROUNDS = 5;
+    const MAX_TOOL_ROUNDS = 3;
     let round = 0;
     let currentMessages = trimmedMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
     const allToolCalls: ValidatedToolCall[] = [];
