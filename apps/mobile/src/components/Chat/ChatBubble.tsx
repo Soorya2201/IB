@@ -7,9 +7,11 @@ import Animated, {
 import Markdown from 'react-native-markdown-display';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
+import { MENU_IMAGES } from '../../constants/menuImages';
 import MenuMicroTile from './MenuMicroTile';
 import { SuggestedItem, RecommendationItem, ToolCallRecord } from '../../types';
 import RecommendationCard from './RecommendationCard';
+import { useTTS } from '../../hooks/useTTS';
 
 interface ChatBubbleProps {
   message: {
@@ -111,6 +113,7 @@ function ActionChip({ toolCall }: { toolCall: ToolCallRecord }) {
 export default function ChatBubble({ message }: ChatBubbleProps) {
   const isUser = message.role === 'user';
   const [cursorVisible, setCursorVisible] = useState(true);
+  const { stop } = useTTS();
 
   useEffect(() => {
     if (!message.isStreaming || !message.content) return;
@@ -129,8 +132,10 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
     ? (cursorVisible ? ' |' : '  ')
     : '');
 
-  const hasTiles = !isUser && !!message.suggestedItems?.length;
-  const hasRecs  = !isUser && !!message.recommendations?.length;
+  const tiles   = (message.suggestedItems ?? []).filter(i => MENU_IMAGES[i.id]);
+  const recs    = (message.recommendations ?? []).filter(i => MENU_IMAGES[i.item_id]);
+  const hasTiles = !isUser && tiles.length > 0;
+  const hasRecs  = !isUser && recs.length > 0;
   const hasTools = !isUser && !!message.toolCalls?.length;
 
   return (
@@ -146,8 +151,12 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
         )}
 
         <View style={[styles.col, isUser && styles.colUser]}>
-          <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAi,
-            isUser && message.inputMethod === 'voice' && styles.bubbleVoice]}>
+          <TouchableOpacity
+            onPress={stop}
+            activeOpacity={0.95}
+            style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAi,
+              isUser && message.inputMethod === 'voice' && styles.bubbleVoice]}
+          >
             {isTyping ? (
               <TypingDots />
             ) : isUser ? (
@@ -155,7 +164,7 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
             ) : (
               <Markdown style={markdownStyles}>{content}</Markdown>
             )}
-          </View>
+          </TouchableOpacity>
 
           {/* Input method indicator for user messages */}
           {isUser && message.inputMethod && (
@@ -188,7 +197,7 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
           style={styles.tilesScroll}
           contentContainerStyle={styles.tilesContent}
         >
-          {message.suggestedItems!.map(item => (
+          {tiles.map(item => (
             <MenuMicroTile key={item.id} item={item} />
           ))}
         </ScrollView>
@@ -202,7 +211,7 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.recsContent}
           >
-            {message.recommendations!.map(item => (
+            {recs.map(item => (
               <RecommendationCard key={item.item_id} item={item} compact />
             ))}
           </ScrollView>

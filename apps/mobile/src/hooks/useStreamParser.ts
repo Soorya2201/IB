@@ -2,6 +2,7 @@ import { useStore } from '../store';
 import { ITEM_IMAGES } from '../constants/itemImages';
 import { ToolCallRecord, RecommendationItem } from '../types';
 import * as Haptics from 'expo-haptics';
+import { MENU_LOOKUP } from '../utils/menuLookup';
 
 export function useStreamParser() {
   const addItem                        = useStore(s => s.addItem);
@@ -22,10 +23,11 @@ export function useStreamParser() {
       case 'add_item': {
         const itemId   = input.item_id as string;
         const quantity = input.quantity as number;
-        addItem({
+        const known    = MENU_LOOKUP[itemId];
+        addItem(known ?? {
           id: itemId, name: itemId.replace(/-/g, ' '),
           price: 0, description: '', pairings: [],
-          image: ITEM_IMAGES[itemId] || '🍽️',
+          image: ITEM_IMAGES[itemId] ?? '🍽️',
         }, quantity);
         break;
       }

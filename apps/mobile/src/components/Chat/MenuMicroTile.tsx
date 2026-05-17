@@ -6,6 +6,7 @@ import { useStore } from '../../store';
 import { COLORS, RADIUS } from '../../constants/theme';
 import { SuggestedItem } from '../../types';
 import { MENU_IMAGES } from '../../constants/menuImages';
+import { getMenuItem } from '../../utils/menuLookup';
 
 interface Props {
   item: SuggestedItem;
@@ -17,10 +18,11 @@ export default function MenuMicroTile({ item }: Props) {
 
   const handleAdd = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    addItem(
-      { id: item.id, name: item.name, price: item.price, description: '', pairings: [], image: item.image },
-      1,
-    );
+    addItem(getMenuItem(item.id) ?? {
+      id: item.id, name: item.name, price: item.price,
+      description: '', pairings: [],
+      image: item.image,
+    }, 1);
   };
 
   return (

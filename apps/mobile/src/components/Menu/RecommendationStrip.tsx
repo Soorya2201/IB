@@ -7,6 +7,7 @@ import { RecommendationItem } from '../../types';
 import { fetchRecommendations } from '../../services/api';
 import { useStore } from '../../store';
 import { MENU_IMAGES } from '../../constants/menuImages';
+import { getMenuItem } from '../../utils/menuLookup';
 
 interface RecommendationStripProps {
   sessionId: string;
@@ -93,7 +94,7 @@ export default function RecommendationStrip({ sessionId, label = 'For You' }: Re
 
   const handleAdd = (item: RecommendationItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    addItem({
+    addItem(getMenuItem(item.item_id) ?? {
       id: item.item_id, name: item.name, price: item.price,
       description: '', pairings: [],
       image: item.image || '🍽️',

@@ -7,13 +7,10 @@ import { useNavigation } from '@react-navigation/native';
 import { useStore } from '../../store';
 import CartItem from './CartItem';
 import { COLORS } from '../../constants/theme';
+import { getMenuItem } from '../../utils/menuLookup';
 
-const RECO_ITEMS = [
-  { id: 'truffle-fries',     name: 'Truffle Fries',     image: '🍟', price: 8.50, description: '', dietary: [], pairings: [] },
-  { id: 'lemonade',          name: 'Fresh Lemonade',     image: '🍋', price: 4.50, description: '', dietary: [], pairings: [] },
-  { id: 'onion-rings',       name: 'Onion Rings',        image: '🧅', price: 7.00, description: '', dietary: [], pairings: [] },
-  { id: 'sweet-potato-fries',name: 'Sweet Potato Fries', image: '🍠', price: 7.50, description: '', dietary: [], pairings: [] },
-];
+const RECO_IDS = ['truffle-fries', 'fresh-lemonade', 'onion-rings', 'sweet-potato-fries'];
+const RECO_ITEMS = RECO_IDS.map(id => getMenuItem(id)).filter(Boolean) as NonNullable<ReturnType<typeof getMenuItem>>[];
 
 export default function CartSheet({ onClose }: { onClose: () => void }) {
   const items    = useStore(s => s.items);

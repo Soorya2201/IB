@@ -160,10 +160,11 @@ export const streamChat = (
       messages: messages.map(m => ({ role: m.role, content: m.content })),
       cart: normalisedCart,
       profile: {
-        restrictions: profile.restrictions,
-        dietary:      profile.restrictions,
-        likedItems:   profile.likedItems,
-        liked:        (profile.likedItems || []).map(i => i.id),
+        restrictions:  profile.restrictions,
+        dietary:       profile.restrictions,
+        likedItems:    profile.likedItems,
+        liked:         (profile.likedItems || []).map(i => i.id),
+        orderHistory:  profile.orderHistory || [],
       },
       sessionId,
     }));

@@ -5,6 +5,7 @@ import { COLORS } from '../../constants/theme';
 import { RecommendationItem } from '../../types';
 import { useStore } from '../../store';
 import { MENU_IMAGES } from '../../constants/menuImages';
+import { getMenuItem } from '../../utils/menuLookup';
 
 interface RecommendationCardProps {
   item: RecommendationItem;
@@ -31,7 +32,7 @@ export default function RecommendationCard({ item, compact = false }: Recommenda
 
   const handleAdd = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    addItem({
+    addItem(getMenuItem(item.item_id) ?? {
       id: item.item_id, name: item.name, price: item.price,
       description: '', pairings: [],
       image: item.image || '🍽️',

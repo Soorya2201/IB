@@ -60,10 +60,23 @@ export interface ChatMessage {
   inputMethod?: 'voice' | 'text';
 }
 
+export interface OrderHistorySummaryItem {
+  id: string;
+  name: string;
+  quantity: number;
+}
+
+export interface OrderHistorySummary {
+  timestamp: string;
+  items: OrderHistorySummaryItem[];
+  total: number;
+}
+
 export interface UserProfile {
   restrictions: string[];
   likedItems?: Array<{ id: string; name: string; price: number }>;
   name?: string;
+  orderHistory?: OrderHistorySummary[];
 }
 
 // Legacy sentinel-based action types (kept for compatibility)

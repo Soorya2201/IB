@@ -23,6 +23,15 @@ function formatCart(cart: any[]): string {
   return `${JSON.stringify(items)}\nOrder total: $${total.toFixed(2)}`;
 }
 
+function formatOrderHistory(history: any[]): string {
+  if (!history?.length) return 'No previous orders this session.';
+  return history.map((o: any, i: number) => {
+    const date  = new Date(o.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const items = o.items.map((it: any) => `${it.name} ×${it.quantity}`).join(', ');
+    return `${i + 1}. ${date} — ${items} (Total: $${Number(o.total).toFixed(2)})`;
+  }).join('\n');
+}
+
 export function buildSystemPrompt(cart: any, profile: any, menu: any): string {
   const dietaryRestrictions = profile?.restrictions?.length > 0
     ? profile.restrictions.join(', ')
@@ -33,6 +42,8 @@ export function buildSystemPrompt(cart: any, profile: any, menu: any): string {
   const likedItems = profile?.likedItems?.length > 0
     ? profile.likedItems.map((i: any) => i.name).join(', ')
     : 'None saved yet';
+
+  const previousOrders = formatOrderHistory(profile?.orderHistory || []);
 
   return `You are Bistro, a warm, witty AI ordering assistant for The Intelligent Bistro.
 Friendly, knowledgeable tone — like a great waiter who wants you to have an amazing meal.
@@ -47,8 +58,12 @@ ${formatCart(cart)}
 Restrictions this session: ${dietaryRestrictions}
 Favourites: ${likedItems}
 
+=== PREVIOUS ORDERS ===
+${previousOrders}
+
 If the user orders something that conflicts with their restrictions, warn them first.
 When asked for recommendations or "the usual", prioritise their liked items.
+When the user says "same as last time", "repeat my order", "the usual", or similar — use the most recent previous order above to re-add those exact items using their IDs.
 
 === HOW TO USE TOOLS ===
 You have 7 tools available. Use them to modify the cart:

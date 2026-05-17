@@ -29,6 +29,11 @@ const ChatRequestSchema = z.object({
     restrictions: z.array(z.string()).optional(),
     liked: z.array(z.string()).optional(),
     likedItems: z.array(z.any()).optional(),
+    orderHistory: z.array(z.object({
+      timestamp: z.string(),
+      items: z.array(z.object({ id: z.string(), name: z.string(), quantity: z.number() })),
+      total: z.number(),
+    })).optional(),
   }).optional(),
   sessionId: z.string().optional(),
 });

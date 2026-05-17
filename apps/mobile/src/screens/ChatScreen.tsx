@@ -1,11 +1,11 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import {
   View, SafeAreaView, KeyboardAvoidingView, Platform,
   Text, TextInput, TouchableOpacity, StyleSheet, Modal,
   Animated, Easing,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useStore } from '../store';
 import ChatList from '../components/Chat/ChatList';
@@ -56,6 +56,7 @@ export default function ChatScreen() {
   const messages      = useStore(s => s.messages);
   const cartItems     = useStore(s => s.items);
   const profile       = useStore(s => s);
+  const orderHistory  = useStore(s => s.orderHistory);
   const quickReplies  = useStore(s => s.quickReplies);
   const isStreaming   = useStore(s => s.isStreaming);
 
@@ -68,6 +69,16 @@ export default function ChatScreen() {
 
   const { processActionsEvent, processRecommendationsEvent, reset } = useStreamParser();
   const { speak, stop: stopTTS } = useTTS();
+
+  // Track focus so onDone callbacks that fire after navigating away don't trigger speech
+  const isFocusedRef = useRef(true);
+  useFocusEffect(useCallback(() => {
+    isFocusedRef.current = true;
+    return () => {
+      isFocusedRef.current = false;
+      stopTTS();
+    };
+  }, [stopTTS]));
 
   // Flat menu catalog used for mention-detection in assistant responses
   const menuCatalogRef = useRef<Array<{ id: string; name: string; price: number; image: string }>>([]);
@@ -167,6 +178,11 @@ export default function ChatScreen() {
       {
         restrictions: profile.restrictions,
         likedItems: profile.likedItems.map(i => ({ id: i.id, name: i.name, price: i.price })),
+        orderHistory: orderHistory.slice(0, 3).map(o => ({
+          timestamp: o.timestamp,
+          items: o.items.map(i => ({ id: i.menuItem.id, name: i.menuItem.name, quantity: i.quantity })),
+          total: o.total,
+        })),
       },
       {
         onActions: (actions) => {
@@ -183,9 +199,11 @@ export default function ChatScreen() {
           const latest = useStore.getState().messages;
           const last   = latest[latest.length - 1];
           if (last?.role === 'assistant' && last.content) {
-            speak(last.content);
+            if (isFocusedRef.current) speak(last.content);
             if (menuCatalogRef.current.length > 0) {
-              const mentions = extractMenuMentions(last.content, menuCatalogRef.current);
+              const cartIds = new Set(useStore.getState().items.map(i => i.menuItem.id));
+              const mentions = extractMenuMentions(last.content, menuCatalogRef.current)
+                .filter(m => !cartIds.has(m.id));
               if (mentions.length > 0) setSuggestedItemsOnLastMessage(mentions);
             }
           }

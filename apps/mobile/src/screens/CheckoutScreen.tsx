@@ -5,7 +5,6 @@ import { useNavigation } from '@react-navigation/native';
 import { useStore } from '../store';
 import OrderRecap from '../components/Checkout/OrderRecap';
 import { streamChat, placeOrder } from '../services/api';
-import { useTTS } from '../hooks/useTTS';
 import { COLORS, SPACING, RADIUS } from '../constants/theme';
 import * as Haptics from 'expo-haptics';
 
@@ -67,8 +66,6 @@ export default function CheckoutScreen() {
   const progressAnim = useRef(new Animated.Value(0)).current;
   const confettiAnim = useRef(new Animated.Value(0)).current;
 
-  const { speak, stop } = useTTS();
-
   useEffect(() => {
     let currentNarration = '';
     const messages = [
@@ -91,22 +88,26 @@ export default function CheckoutScreen() {
           setNarration(currentNarration);
         },
         onRecommendations: () => {},
-        onDone: () => { speak(currentNarration); },
+        onDone: () => {},
         onError: () => {
           setNarration('Ready to place your order?');
-          speak('Ready to place your order?');
         },
       },
       SESSION_ID,
     );
 
-    return () => stop();
   }, []);
 
   const handleConfirm = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    addOrderToHistory(cartItems, getTotal());
+
+    // Snapshot before clearing so placeOrder and history use the correct data
+    const snapshot = cartItems;
+    const subtotal = Math.round(getTotal() * 100) / 100;
+
+    addOrderToHistory(snapshot, subtotal);
     setIsConfirmed(true);
+    clearCart();
 
     // Persist email to profile so it pre-fills next time
     const resolvedEmail = wantsReceipt && emailInput.trim() ? emailInput.trim() : undefined;
@@ -114,12 +115,11 @@ export default function CheckoutScreen() {
 
     // Try to persist order to backend
     try {
-      const subtotal = Math.round(getTotal() * 100) / 100;
-      const tax      = Math.round(subtotal * 0.1 * 100) / 100;
-      const total    = Math.round((subtotal + tax) * 100) / 100;
-      const result   = await placeOrder({
+      const tax   = Math.round(subtotal * 0.1 * 100) / 100;
+      const total = Math.round((subtotal + tax) * 100) / 100;
+      const result = await placeOrder({
         sessionId: SESSION_ID,
-        items: cartItems.map(c => ({
+        items: snapshot.map(c => ({
           item_id:  c.menuItem.id,
           name:     c.menuItem.name,
           quantity: c.quantity,
@@ -136,7 +136,6 @@ export default function CheckoutScreen() {
     }
 
     // Start 4-stage progress animation
-    let currentStage = 0;
     setOrderStage(0);
 
     const advance = (stageIndex: number) => {
@@ -148,7 +147,6 @@ export default function CheckoutScreen() {
       setOrderStage(stageIndex);
 
       if (stageIndex === ORDER_STAGES.length - 1) {
-        // Confetti celebration
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Animated.sequence([
           Animated.timing(confettiAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
@@ -162,11 +160,6 @@ export default function CheckoutScreen() {
       if (i === 0) { advance(0); return; }
       setTimeout(() => advance(i), stage.delay);
     });
-
-    // Clear cart after all stages
-    setTimeout(() => {
-      clearCart();
-    }, 95000);
   };
 
   if (isConfirmed) {
