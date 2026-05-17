@@ -23,6 +23,10 @@ export function useStreamParser() {
       case 'add_item': {
         const itemId   = input.item_id as string;
         const quantity = input.quantity as number;
+        if (itemId === 'combo-discount') {
+          addItem({ id: 'combo-discount', name: 'Combo Discount', price: -2.00, description: 'Combo saving', pairings: [], image: '🎉' }, quantity);
+          break;
+        }
         const known    = MENU_LOOKUP[itemId];
         addItem(known ?? {
           id: itemId, name: itemId.replace(/-/g, ' '),

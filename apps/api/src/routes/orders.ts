@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { createOrder, getOrdersBySession, getOrderById, updateOrderStatus } from '../db/orderRepository';
+import { getMenuItemById } from '../db/menuRepository';
 import { metrics } from '../services/metrics';
 
 const router = Router();
@@ -27,6 +28,23 @@ router.post('/', (req, res) => {
   if (!parseResult.success) {
     res.status(400).json({ error: { code: 'INVALID_INPUT', message: parseResult.error.issues.map(i => i.message).join('; ') } });
     return;
+  }
+
+  for (const item of parseResult.data.items) {
+    if (item.item_id === 'combo-discount') continue;
+    const menuItem = getMenuItemById(item.item_id);
+    if (!menuItem) {
+      res.status(404).json({
+        error: { code: 'ITEM_NOT_FOUND', message: `Menu item "${item.name}" no longer exists.`, item_id: item.item_id },
+      });
+      return;
+    }
+    if (menuItem.available === false) {
+      res.status(409).json({
+        error: { code: 'ITEM_UNAVAILABLE', message: `Sorry, "${menuItem.name}" is currently unavailable.`, item_id: item.item_id },
+      });
+      return;
+    }
   }
 
   try {

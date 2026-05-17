@@ -1,5 +1,5 @@
 import { buildSystemPrompt } from '../services/anthropic';
-import { BISTRO_TOOLS } from '../ai/tools';
+import { BISTRO_TOOLS, validateToolInput } from '../ai/tools';
 import menuData from '../data/menu.json';
 
 const emptyCart    = [] as any[];
@@ -141,5 +141,27 @@ describe('BISTRO_TOOLS — tool definitions', () => {
     const schema = tool.input_schema as any;
     expect(schema.properties.quantity.minimum).toBe(1);
     expect(schema.properties.quantity.maximum).toBe(20);
+  });
+});
+
+describe('combo-discount and guardrail rules', () => {
+  it('accepts combo-discount as a valid add_item id', () => {
+    const result = validateToolInput('add_item', { item_id: 'combo-discount', quantity: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it('system prompt contains DISAMBIGUATION rule', () => {
+    const prompt = buildSystemPrompt([], {}, []);
+    expect(prompt).toContain('DISAMBIGUATION');
+  });
+
+  it('system prompt contains EXPLICIT CONSENT rule', () => {
+    const prompt = buildSystemPrompt([], {}, []);
+    expect(prompt).toContain('EXPLICIT CONSENT');
+  });
+
+  it('system prompt contains COMBO DISCOUNTS rule', () => {
+    const prompt = buildSystemPrompt([], {}, []);
+    expect(prompt).toContain('COMBO DISCOUNTS');
   });
 });

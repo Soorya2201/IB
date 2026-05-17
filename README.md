@@ -3,7 +3,7 @@
 > **A full-stack AI-powered food ordering experience — order by voice, text, or tap.**
 
 ![CI](https://github.com/Soorya2201/Intelligent-Bistro/actions/workflows/ci.yml/badge.svg)
-![Tests](https://img.shields.io/badge/tests-150%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-159%20passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-lightgrey)
 
@@ -61,10 +61,22 @@ Say *"Add two spicy chicken sandwiches, remove the fries, and make it a combo"* 
 
 ### 🛠️ Native Tool-Calling (Two-Phase Streaming)
 The backend runs two Claude passes per message:
-1. **Phase 1** — non-streaming, `tool_choice: auto`. Claude calls tools (`add_item`, `remove_item`, `update_quantity`, `clear_cart`, `clarify`, `suggest_pairing`, `upsell`) to mutate the cart atomically.
+1. **Phase 1** — non-streaming agentic tool loop (up to 5 rounds). Claude calls tools (`add_item`, `remove_item`, `update_quantity`, `clear_cart`, `clarify`, `suggest_pairing`, `upsell`) to mutate the cart atomically, feeding tool results back in for multi-step resolution.
 2. **Phase 2** — streaming, `tool_choice: none`. Claude narrates what it just did in natural language, streamed token-by-token to the client.
 
 This separates cart mutations (which must be atomic) from conversational text (which benefits from streaming).
+
+### 🔄 Agentic Tool Loop
+Phase 1 runs up to 5 tool-calling rounds per message. Each round feeds tool results back into the conversation so the AI can chain actions — e.g. clarify → add_item → apply combo discount — all in a single user turn.
+
+### 💰 Combo Discounts
+When the cart contains any burger + any side + any drink, Margaux automatically applies a $2.00 combo discount. The discount appears as a line item in the cart and is never double-applied.
+
+### 💀 Skeleton Loading
+Animated shimmer placeholder cards replace the menu grid for 600ms on first load, giving the UI a polished, app-store-quality feel while assets settle.
+
+### 🎭 Demo Mode
+Set `MOCK_AI=true` in `.env` to run fully offline with scripted responses — no API key needed. Ideal for conference demos and CI environments.
 
 ### 🎙️ End-to-End Voice I/O
 - **Speech-to-text** via Groq's Whisper API (`whisper-large-v3-turbo`) — fast, accurate, free tier
@@ -133,7 +145,7 @@ Opt in at checkout to receive a branded HTML receipt by email. Powered by nodema
 | Language | TypeScript (strict) | End-to-end type safety |
 | State | Zustand | Minimal, composable slices |
 | Backend | Node.js + Express | Lightweight, SSE-native |
-| AI | Anthropic Claude (`claude-sonnet-4-6`) | Native tool-calling, best-in-class instruction following |
+| AI | Anthropic Claude (`claude-sonnet-4-6`) | Native tool-calling, agentic tool loop (up to 5 rounds) |
 | Voice STT | Groq Whisper | 2,000 min/day free, <1 s latency |
 | Voice TTS | `expo-speech` | Native on-device, no API cost |
 | Database | SQLite (`better-sqlite3`) | Zero-config, WAL mode, fast reads |
@@ -217,18 +229,19 @@ Intelligent-Bistro/
 
 ## Test Suite
 
-**150 tests across 8 suites — all passing.**
+**159 tests across 9 suites — all passing.**
 
 | Suite | Tests | What it covers |
 |---|---|---|
 | `tools.test.ts` | 35 | Tool schemas, Zod validation, input edge cases |
 | `menu.schema.test.ts` | 12 | Menu JSON structure, required fields, price validity |
-| `anthropic.test.ts` | 18 | System prompt generation, cart/profile injection |
+| `anthropic.test.ts` | 22 | System prompt generation, guardrail rules, combo discount, cart/profile injection |
 | `streamParser.test.ts` | 22 | Structured SSE parsing, split-chunk edge cases |
 | `cartSlice.test.ts` | 22 | Add, remove, update, clear, quantity merge, totals |
 | `chatSlice.test.ts` | 19 | Message append, streaming state, quick replies |
 | `profileSlice.test.ts` | 14 | Dietary restrictions, liked items, email, toggles |
 | `recommendations.test.ts` | 8 | Scoring logic, cart fingerprinting, dietary filter |
+| `stripMarkdown.test.ts` | 5 | Markdown stripping for TTS (bold, italic, code, mixed) |
 
 ---
 

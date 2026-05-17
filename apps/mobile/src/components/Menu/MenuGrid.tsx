@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { FlashList } from '@shopify/flash-list';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import MenuCard from './MenuCard';
+import MenuCardSkeleton from './MenuCardSkeleton';
 import { COLORS } from '../../constants/theme';
 import { MenuItem } from '../../types';
 import menuData from '../../../../api/src/data/menu.json';
@@ -20,6 +21,12 @@ const CAT_ICONS: Record<string, MCIcon> = {
 export default function MenuGrid() {
   const [activeCategory, setActiveCategory] = useState(menuData.categories[0].id);
   const [listKey, setListKey] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 600);
+    return () => clearTimeout(t);
+  }, []);
 
   const categories = menuData.categories;
   const items = (categories.find(c => c.id === activeCategory)?.items ?? []) as MenuItem[];
@@ -71,21 +78,31 @@ export default function MenuGrid() {
 
       {/* Grid */}
       <View style={styles.grid}>
-        <Animated.View key={listKey} entering={FadeIn.duration(220)} style={{ flex: 1 }}>
-          <FlashList
-            data={items}
-            renderItem={({ item, index }) => (
-              <View style={styles.cell}>
-                <MenuCard item={item} index={index} />
+        {loading ? (
+          <View style={styles.skeletonGrid}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <View key={i} style={styles.cell}>
+                <MenuCardSkeleton />
               </View>
-            )}
-            // @ts-ignore
-            estimatedItemSize={290}
-            numColumns={2}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
-          />
-        </Animated.View>
+            ))}
+          </View>
+        ) : (
+          <Animated.View key={listKey} entering={FadeIn.duration(220)} style={{ flex: 1 }}>
+            <FlashList
+              data={items}
+              renderItem={({ item, index }) => (
+                <View style={styles.cell}>
+                  <MenuCard item={item} index={index} />
+                </View>
+              )}
+              // @ts-ignore
+              estimatedItemSize={290}
+              numColumns={2}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+            />
+          </Animated.View>
+        )}
       </View>
 
     </View>
@@ -140,6 +157,10 @@ const styles = StyleSheet.create({
   },
 
   grid: { flex: 1, paddingHorizontal: 10 },
+  skeletonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
   cell: { flex: 1, padding: 6 },
   listContent: { paddingBottom: 120 },
 });

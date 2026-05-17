@@ -6,6 +6,7 @@ import { getMenuAsCategories } from '../db/menuRepository';
 import { recordInteraction } from '../db/interactionRepository';
 import { getRecommendations, shouldSkipRecommendations } from '../services/recommendations';
 import { recordChatRequest, recordToolCall } from '../services/metrics';
+import { handleMockChat } from '../services/mockAi';
 
 const router = Router();
 
@@ -79,6 +80,14 @@ router.post('/', async (req, res) => {
 
   const sendEvent = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
+  if (process.env.MOCK_AI === 'true') {
+    const lastMsg = messages[messages.length - 1];
+    await handleMockChat(lastMsg?.content || '', sendEvent);
+    clearInterval(keepAlive);
+    res.end();
+    return;
+  }
+
   try {
     const menu = getMenuAsCategories();
     const systemPrompt = buildSystemPrompt(cart, profile, menu);
@@ -96,77 +105,83 @@ router.post('/', async (req, res) => {
 
     const startTime = Date.now();
 
-    // ─── PHASE 1: Tool resolution (non-streaming) ─────────────────────────
-    const toolResponse = await anthropicClient.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      system: systemPrompt,
-      tools: BISTRO_TOOLS as any,
-      tool_choice: { type: 'auto' },
-      messages: trimmedMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-    });
-
-    const toolCalls: ValidatedToolCall[] = [];
+    // ─── PHASE 1: Agentic tool resolution (non-streaming, up to 5 rounds) ──
+    const MAX_TOOL_ROUNDS = 5;
+    let round = 0;
+    let currentMessages = trimmedMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    const allToolCalls: ValidatedToolCall[] = [];
     let cartMutated = false;
 
-    for (const block of toolResponse.content) {
-      if (block.type !== 'tool_use') continue;
+    while (round < MAX_TOOL_ROUNDS) {
+      round++;
+      const response = await anthropicClient.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        system: systemPrompt,
+        tools: BISTRO_TOOLS as any,
+        tool_choice: { type: 'auto' },
+        messages: currentMessages,
+      });
 
-      const validation = validateToolInput(block.name, block.input);
-      if (!validation.success) {
-        const rejected: ValidatedToolCall = {
+      const toolUsesThisRound = response.content.filter((b: any) => b.type === 'tool_use');
+      if (toolUsesThisRound.length === 0) break;
+
+      const toolResults: any[] = [];
+      for (const block of response.content) {
+        if (block.type !== 'tool_use') continue;
+        const validation = validateToolInput(block.name, block.input);
+        const applied = validation.success;
+        const tc: ValidatedToolCall = {
           name: block.name as any,
           input: block.input as Record<string, unknown>,
-          status: 'rejected',
-          rejectionReason: validation.error,
+          status: applied ? 'applied' : 'rejected',
+          rejectionReason: applied ? undefined : validation.error,
         };
-        toolCalls.push(rejected);
-        recordToolCall(block.name, false);
-        continue;
-      }
+        allToolCalls.push(tc);
+        recordToolCall(block.name, applied);
 
-      const applied: ValidatedToolCall = {
-        name: block.name as any,
-        input: block.input as Record<string, unknown>,
-        status: 'applied',
-      };
-      toolCalls.push(applied);
-      recordToolCall(block.name, true);
-
-      // Record interactions for recommendation engine
-      if (sessionId) {
-        if (block.name === 'add_item') {
-          recordInteraction(sessionId, (block.input as any).item_id, 'added');
-          cartMutated = true;
-        } else if (block.name === 'remove_item') {
-          recordInteraction(sessionId, (block.input as any).item_id, 'removed');
-          cartMutated = true;
-        } else if (block.name === 'clear_cart') {
-          cartMutated = true;
-        } else if (block.name === 'update_quantity') {
-          cartMutated = true;
+        if (sessionId && applied) {
+          if (block.name === 'add_item') {
+            recordInteraction(sessionId, (block.input as any).item_id, 'added');
+            cartMutated = true;
+          } else if (block.name === 'remove_item') {
+            recordInteraction(sessionId, (block.input as any).item_id, 'removed');
+            cartMutated = true;
+          } else if (block.name === 'clear_cart' || block.name === 'update_quantity') {
+            cartMutated = true;
+          }
         }
+
+        toolResults.push({
+          type: 'tool_result' as const,
+          tool_use_id: block.id,
+          content: applied ? 'ok' : `error: ${tc.rejectionReason}`,
+        });
       }
+
+      currentMessages = [
+        ...currentMessages,
+        { role: 'assistant' as const, content: response.content as any },
+        { role: 'user' as const, content: toolResults as any },
+      ];
     }
 
-    if (toolCalls.length > 0) {
-      sendEvent({ type: 'actions', actions: toolCalls });
+    if (allToolCalls.length > 0) {
+      sendEvent({ type: 'actions', actions: allToolCalls });
     }
 
     // ─── PHASE 2: Text streaming ───────────────────────────────────────────
-    // Build conversation context including tool results for Phase 2
-    const phase2Messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
-      ...trimmedMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-    ];
+    // Use the full tool-conversation context for Phase 2
+    const phase2Messages = [...currentMessages];
 
-    if (toolCalls.length > 0) {
-      const appliedSummary = toolCalls
+    if (allToolCalls.length > 0) {
+      const appliedSummary = allToolCalls
         .filter(t => t.status === 'applied')
         .map(t => `${t.name}: ${JSON.stringify(t.input)}`)
         .join(', ');
       phase2Messages.push({
-        role: 'user',
-        content: `[System: Tools were applied — ${appliedSummary}. Now respond conversationally confirming what was done. Do NOT call any tools.]`,
+        role: 'user' as const,
+        content: `[System: Tools were applied — ${appliedSummary}. Now respond conversationally confirming what was done. Do NOT call any tools.]` as any,
       });
     }
 
@@ -198,7 +213,7 @@ router.post('/', async (req, res) => {
       );
       const addedIds = new Set<string>();
       const removedIds = new Set<string>();
-      for (const tc of toolCalls) {
+      for (const tc of allToolCalls) {
         if (tc.status !== 'applied') continue;
         if (tc.name === 'add_item') addedIds.add((tc.input as any).item_id);
         else if (tc.name === 'remove_item') removedIds.add((tc.input as any).item_id);
