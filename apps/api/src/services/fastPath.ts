@@ -73,7 +73,7 @@ export function tryFastPath(message: string): FastPathResult {
   return { matched: false };
 }
 
-export function disambiguate(transcript: string, threshold = 0.4):
+export function disambiguate(transcript: string, threshold = 0.2):
   | { found: true; itemId: string; itemName: string; original: string }
   | { found: false; original: string } {
   const q = transcript.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
