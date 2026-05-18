@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.1.0] — 2026-05-18
+
+### Added
+- Server fast path: simple add/remove/clear commands bypass Claude entirely (< 50 ms)
+- Explicit-consent preview mode: toggle in Profile to review AI cart changes before applying
+- Voice disambiguation chips: unrecognised items surface "Did you mean?" instead of failing silently
+- Order ETA countdown simulation (15–22 min, 3 stages: preparing → almost → ready)
+- Calorie and allergen display on recommendation and suggestion cards
+- Jaccard similarity scorer for fuzzy item name matching
+- 14 new tests: fast path (8) + disambiguation (6)
+
 ## [2.0.0] — 2025-05
 
 ### Added

@@ -310,6 +310,11 @@ cd apps/mobile && npm test
 | Email receipts via nodemailer | Zero infra cost; gracefully no-ops without SMTP config so demo mode works out of the box |
 | Zustand over Redux | Slice composition without boilerplate; selector-based re-renders out of the box |
 | Groq Whisper over OpenAI | 10× faster cold start, free tier sufficient for demos and development |
+| Fast path | Simple commands bypass Claude entirely — sub-50ms vs ~800ms |
+| Confirmation mode | Toggleable consent-before-mutation (profile settings) |
+| Disambiguation chips | Voice edge cases surface "Did you mean?" instead of silent failure |
+| ETA simulation | Live countdown timer post-order (WebSocket in production) |
+| Allergen + calorie info | Surfaced on all AI suggestion and recommendation cards |
 
 ---
 
