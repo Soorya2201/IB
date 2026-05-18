@@ -7,6 +7,7 @@ import { recordInteraction } from '../db/interactionRepository';
 import { getRecommendations, shouldSkipRecommendations } from '../services/recommendations';
 import { recordChatRequest, recordToolCall } from '../services/metrics';
 import { handleMockChat } from '../services/mockAi';
+import { tryFastPath } from '../services/fastPath';
 
 const router = Router();
 
@@ -86,6 +87,43 @@ router.post('/', async (req, res) => {
     clearInterval(keepAlive);
     res.end();
     return;
+  }
+
+  // Fast path — simple commands bypass Claude entirely
+  const lastUserMsg = messages[messages.length - 1];
+  if (lastUserMsg?.role === 'user') {
+    const fp = tryFastPath(lastUserMsg.content);
+    if (fp.matched) {
+      const startTime = Date.now();
+      if (fp.actions && fp.actions.length > 0) {
+        // Map fast path action format to ValidatedToolCall format
+        const fpToolCalls = fp.actions.map(a => ({
+          name: a.tool as any,
+          input: a.input,
+          status: 'applied' as const,
+        }));
+        sendEvent({ type: 'actions', actions: fpToolCalls, source: 'fast_path' });
+        // Record interactions
+        if (sessionId) {
+          for (const a of fp.actions) {
+            if (a.tool === 'add_item') {
+              recordInteraction(sessionId, (a.input as any).item_id, 'added');
+            } else if (a.tool === 'remove_item') {
+              recordInteraction(sessionId, (a.input as any).item_id, 'removed');
+            }
+          }
+        }
+      }
+      if (fp.reply && fp.reply !== '__VIEW_CART__') {
+        sendEvent({ type: 'delta', text: fp.reply });
+      }
+      const latencyMs = Date.now() - startTime;
+      recordChatRequest(latencyMs);
+      sendEvent({ type: 'done', latencyMs, source: 'fast_path' });
+      clearInterval(keepAlive);
+      res.end();
+      return;
+    }
   }
 
   try {

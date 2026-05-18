@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { db } from './db/database';
 import { seedMenu } from './db/seed';
+import { getAllMenuItems } from './db/menuRepository';
+import { initFastPath } from './services/fastPath';
 import chatRouter from './routes/chat';
 import menuRouter from './routes/menu';
 import transcribeRouter from './routes/transcribe';
@@ -13,6 +15,7 @@ import { metrics, p95 } from './services/metrics';
 
 // Seed menu data on startup (idempotent)
 seedMenu();
+initFastPath(getAllMenuItems());
 
 const app = express();
 
