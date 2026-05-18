@@ -12,6 +12,7 @@ export function useStreamParser() {
   const setQuickReplies                = useStore(s => s.setQuickReplies);
   const setToolCallsOnLastMessage      = useStore(s => s.setToolCallsOnLastMessage);
   const setRecommendationsOnLastMessage = useStore(s => s.setRecommendationsOnLastMessage);
+  const setPendingActions              = useStore(s => s.setPendingActions);
 
   const dispatchToolCall = (toolCall: ToolCallRecord) => {
     if (toolCall.status !== 'applied') return;
@@ -83,8 +84,12 @@ export function useStreamParser() {
     setRecommendationsOnLastMessage(items);
   };
 
+  const processPreviewEvent = (actions: ToolCallRecord[]) => {
+    setPendingActions(actions);
+  };
+
   // Noop reset — no buffer needed for structured SSE
   const reset = () => {};
 
-  return { processActionsEvent, processRecommendationsEvent, reset };
+  return { processActionsEvent, processRecommendationsEvent, processPreviewEvent, reset };
 }

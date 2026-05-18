@@ -58,6 +58,7 @@ export interface StreamChatCallbacks {
   onActions: (actions: ToolCallRecord[]) => void;
   onDelta: (text: string) => void;
   onRecommendations: (items: RecommendationItem[]) => void;
+  onPreview?: (actions: ToolCallRecord[]) => void;
   onDone: () => void;
   onError: (err: string) => void;
 }
@@ -70,6 +71,7 @@ export const streamChat = (
   profile: UserProfile,
   callbacks: StreamChatCallbacks,
   sessionId?: string,
+  requireConfirmation?: boolean,
 ): Promise<void> => {
   return new Promise((resolve) => {
     const xhr   = new XMLHttpRequest();
@@ -111,6 +113,9 @@ export const streamChat = (
               break;
             case 'recommendations':
               if (parsed.items) callbacks.onRecommendations(parsed.items);
+              break;
+            case 'preview':
+              if (parsed.actions && callbacks.onPreview) callbacks.onPreview(parsed.actions);
               break;
             case 'done':
               settle(callbacks.onDone);
@@ -167,6 +172,7 @@ export const streamChat = (
         orderHistory:  profile.orderHistory || [],
       },
       sessionId,
+      requireConfirmation: requireConfirmation ?? false,
     }));
   });
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, SafeAreaView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, SafeAreaView, StyleSheet, Switch } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useStore } from '../store';
 import { COLORS, SPACING, RADIUS, TYPOGRAPHY } from '../constants/theme';
@@ -14,9 +14,11 @@ function formatTime(iso: string) {
 }
 
 export default function ProfileScreen() {
-  const orderHistory = useStore(s => s.orderHistory);
-  const likedItems   = useStore(s => s.likedItems);
-  const restrictions = useStore(s => s.restrictions);
+  const orderHistory          = useStore(s => s.orderHistory);
+  const likedItems            = useStore(s => s.likedItems);
+  const restrictions          = useStore(s => s.restrictions);
+  const requireConfirmation   = useStore(s => s.requireConfirmation);
+  const toggleRequireConfirmation = useStore(s => s.toggleRequireConfirmation);
 
   return (
     <SafeAreaView style={styles.root}>
@@ -38,6 +40,22 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
+
+        {/* Settings */}
+        <Section title="Settings" icon="settings">
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>Confirm before cart changes</Text>
+              <Text style={styles.settingSub}>Review AI actions before they're applied</Text>
+            </View>
+            <Switch
+              value={requireConfirmation}
+              onValueChange={toggleRequireConfirmation}
+              trackColor={{ false: COLORS.bistroCream2, true: COLORS.bistroGold }}
+              thumbColor={COLORS.card}
+            />
+          </View>
+        </Section>
 
         {/* Liked items */}
         <Section title="Your Favourites" icon="heart">
@@ -177,4 +195,19 @@ const styles = StyleSheet.create({
 
   emptyHint:     { padding: SPACING.md, alignItems: 'center' },
   emptyHintText: { ...TYPOGRAPHY.small, textAlign: 'center' },
+
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: 8,
+    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 }, elevation: 1,
+  },
+  settingInfo:  { flex: 1, marginRight: SPACING.md },
+  settingLabel: { fontSize: 14, fontWeight: '600', color: COLORS.bistroBrown },
+  settingSub:   { fontSize: 11, color: COLORS.medGray, marginTop: 2 },
 });

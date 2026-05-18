@@ -38,6 +38,7 @@ const ChatRequestSchema = z.object({
     })).optional(),
   }).optional(),
   sessionId: z.string().optional(),
+  requireConfirmation: z.boolean().default(false),
 });
 
 const MAX_HISTORY_TURNS = parseInt(process.env.MAX_HISTORY_TURNS || '8', 10);
@@ -70,7 +71,7 @@ router.post('/', async (req, res) => {
     return;
   }
 
-  const { messages, cart, profile, sessionId } = parseResult.data;
+  const { messages, cart, profile, sessionId, requireConfirmation } = parseResult.data;
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -202,6 +203,14 @@ router.post('/', async (req, res) => {
         { role: 'assistant' as const, content: response.content as any },
         { role: 'user' as const, content: toolResults as any },
       ];
+    }
+
+    if (requireConfirmation && allToolCalls.some(tc => tc.status === 'applied')) {
+      sendEvent({ type: 'preview', actions: allToolCalls, requireConfirmation: true });
+      sendEvent({ type: 'done', awaitingConfirmation: true });
+      clearInterval(keepAlive);
+      res.end();
+      return;
     }
 
     if (allToolCalls.length > 0) {

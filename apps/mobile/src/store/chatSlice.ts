@@ -7,6 +7,7 @@ export interface ChatSlice {
   quickReplies: string[];
   pendingClarification: boolean;
   isAiSpeaking: boolean;
+  pendingActions: ToolCallRecord[] | null;
   addMessage: (msg: ChatMessage) => void;
   appendToLastAssistantMessage: (text: string) => void;
   setSuggestedItemsOnLastMessage: (items: SuggestedItem[]) => void;
@@ -16,6 +17,8 @@ export interface ChatSlice {
   setQuickReplies: (options: string[]) => void;
   clearQuickReplies: () => void;
   setAiSpeaking: (isSpeaking: boolean) => void;
+  setPendingActions: (actions: ToolCallRecord[]) => void;
+  clearPendingActions: () => void;
 }
 
 export const createChatSlice: StateCreator<ChatSlice, [], [], ChatSlice> = (set) => ({
@@ -24,6 +27,7 @@ export const createChatSlice: StateCreator<ChatSlice, [], [], ChatSlice> = (set)
   quickReplies: [],
   pendingClarification: false,
   isAiSpeaking: false,
+  pendingActions: null,
 
   addMessage: (msg) => set((state) => ({ messages: [...state.messages, msg] })),
 
@@ -81,4 +85,6 @@ export const createChatSlice: StateCreator<ChatSlice, [], [], ChatSlice> = (set)
   setQuickReplies: (options) => set({ quickReplies: options, pendingClarification: true }),
   clearQuickReplies: () => set({ quickReplies: [], pendingClarification: false }),
   setAiSpeaking: (isSpeaking) => set({ isAiSpeaking: isSpeaking }),
+  setPendingActions: (actions) => set({ pendingActions: actions }),
+  clearPendingActions: () => set({ pendingActions: null }),
 });

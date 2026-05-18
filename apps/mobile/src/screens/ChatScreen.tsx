@@ -10,6 +10,7 @@ import { useHeaderHeight } from '@react-navigation/elements';
 import { useStore } from '../store';
 import ChatList from '../components/Chat/ChatList';
 import QuickReplyChips from '../components/Chat/QuickReplyChips';
+import ConfirmationChip from '../components/Chat/ConfirmationChip';
 import SpeechWebView, { SpeechWebViewRef } from '../components/Chat/SpeechWebView';
 import WaveBar from '../components/Chat/WaveBar';
 import CartSheet from '../components/Cart/CartSheet';
@@ -59,6 +60,8 @@ export default function ChatScreen() {
   const orderHistory  = useStore(s => s.orderHistory);
   const quickReplies  = useStore(s => s.quickReplies);
   const isStreaming   = useStore(s => s.isStreaming);
+  const pendingActions = useStore(s => s.pendingActions);
+  const requireConfirmation = useStore(s => s.requireConfirmation);
 
   const addMessage                      = useStore(s => s.addMessage);
   const setStreaming                    = useStore(s => s.setStreaming);
@@ -66,8 +69,9 @@ export default function ChatScreen() {
   const setSuggestedItemsOnLastMessage = useStore(s => s.setSuggestedItemsOnLastMessage);
   const addRestriction                 = useStore(s => s.addRestriction);
   const clearQuickReplies              = useStore(s => s.clearQuickReplies);
+  const clearPendingActions            = useStore(s => s.clearPendingActions);
 
-  const { processActionsEvent, processRecommendationsEvent, reset } = useStreamParser();
+  const { processActionsEvent, processRecommendationsEvent, processPreviewEvent, reset } = useStreamParser();
   const { speak, stop: stopTTS } = useTTS();
 
   // Track focus so onDone callbacks that fire after navigating away don't trigger speech
@@ -194,6 +198,10 @@ export default function ChatScreen() {
         onRecommendations: (items) => {
           processRecommendationsEvent(items);
         },
+        onPreview: (actions) => {
+          processPreviewEvent(actions);
+          setStreaming(false);
+        },
         onDone: () => {
           setStreaming(false);
           const latest = useStore.getState().messages;
@@ -215,6 +223,7 @@ export default function ChatScreen() {
         },
       },
       SESSION_ID,
+      requireConfirmation,
     );
   };
 
@@ -261,6 +270,20 @@ export default function ChatScreen() {
         <View style={{ flex: 1 }}>
           <ChatList />
         </View>
+
+        {pendingActions && pendingActions.length > 0 && (
+          <ConfirmationChip
+            actions={pendingActions}
+            onConfirm={() => {
+              processActionsEvent(pendingActions);
+              clearPendingActions();
+            }}
+            onCancel={() => {
+              clearPendingActions();
+              appendToLastAssistantMessage('\n[Changes cancelled]');
+            }}
+          />
+        )}
 
         {quickReplies.length > 0 && (
           <QuickReplyChips onSelect={handleQuickReply} />
