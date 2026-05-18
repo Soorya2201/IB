@@ -21,13 +21,15 @@ router.get('/', async (req, res) => {
       const popular = getPopularItems(RECOMMENDATION_COUNT);
       res.json({
         recommendations: popular.map(item => ({
-          item_id: item.id,
-          name:    item.name,
-          price:   item.price,
-          image:   item.image,
-          reason:  'Popular tonight',
-          score:   0.8,
-          source:  'popularity',
+          item_id:   item.id,
+          name:      item.name,
+          price:     item.price,
+          image:     item.image,
+          reason:    'Popular tonight',
+          score:     0.8,
+          source:    'popularity',
+          calories:  item.calories ?? undefined,
+          allergens: item.allergens ?? [],
         })),
       });
       return;
@@ -40,13 +42,15 @@ router.get('/', async (req, res) => {
       const popular = getPopularItems(RECOMMENDATION_COUNT);
       res.json({
         recommendations: popular.map(item => ({
-          item_id: item.id,
-          name:    item.name,
-          price:   item.price,
-          image:   item.image,
-          reason:  'Popular tonight',
-          score:   0.7,
-          source:  'popularity',
+          item_id:   item.id,
+          name:      item.name,
+          price:     item.price,
+          image:     item.image,
+          reason:    'Popular tonight',
+          score:     0.7,
+          source:    'popularity',
+          calories:  item.calories ?? undefined,
+          allergens: item.allergens ?? [],
         })),
       });
       return;

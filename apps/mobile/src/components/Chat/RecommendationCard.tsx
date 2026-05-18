@@ -12,6 +12,10 @@ interface RecommendationCardProps {
   compact?: boolean;
 }
 
+const ALLERGEN_EMOJI: Record<string, string> = {
+  Gluten: '🌾', Dairy: '🥛', Nuts: '🥜', Eggs: '🥚', Fish: '🐟', Soy: '🫘', Shellfish: '🦐',
+};
+
 function ReasonChip({ reason, source }: { reason: string; source: string }) {
   let bg    = COLORS.bistroGold;
   let label = '🔥 ' + reason;
@@ -61,6 +65,13 @@ export default function RecommendationCard({ item, compact = false }: Recommenda
           {item.name}
         </Text>
         <Text style={styles.price}>${item.price.toFixed(2)}</Text>
+        {(item.calories || (item.allergens && item.allergens.length > 0)) ? (
+          <Text style={styles.meta}>
+            {item.calories ? `~${item.calories} cal` : ''}
+            {item.calories && item.allergens && item.allergens.length > 0 ? ' · ' : ''}
+            {item.allergens ? item.allergens.slice(0, 3).map(a => ALLERGEN_EMOJI[a] ?? a).join(' ') : ''}
+          </Text>
+        ) : null}
         <ReasonChip reason={item.reason} source={item.source} />
       </View>
 
@@ -97,6 +108,7 @@ const styles = StyleSheet.create({
   name:        { fontSize: 13, fontWeight: '700', color: COLORS.bistroBrown },
   nameCompact: { fontSize: 11 },
   price:       { fontSize: 12, color: COLORS.bistroGold, fontWeight: '600' },
+  meta:        { fontSize: 10, color: COLORS.medGray, marginTop: 1 },
 
   reasonChip: {
     borderRadius: 8, borderWidth: 0.5,

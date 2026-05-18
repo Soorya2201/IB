@@ -117,5 +117,7 @@ export async function getRecommendations(
       reason:    s.reason,
       score:     Math.round(s.score * 100) / 100,
       source:    s.source,
+      calories:  s.item.calories ?? undefined,
+      allergens: s.item.allergens ?? [],
     }));
 }

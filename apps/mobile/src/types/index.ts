@@ -39,6 +39,8 @@ export interface RecommendationItem {
   reason: string;
   score: number;
   source: string;
+  calories?: number;
+  allergens?: string[];
 }
 
 export interface ToolCallRecord {

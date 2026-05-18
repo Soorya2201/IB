@@ -1,5 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+
+const ALLERGEN_EMOJI: Record<string, string> = {
+  Gluten: '🌾', Dairy: '🥛', Nuts: '🥜', Eggs: '🥚', Fish: '🐟', Soy: '🫘', Shellfish: '🦐',
+};
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { COLORS, SPACING } from '../../constants/theme';
@@ -61,6 +65,13 @@ function RecCard({
         <View style={styles.cardInfo}>
           <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
+          {(item.calories || (item.allergens && item.allergens.length > 0)) ? (
+            <Text style={styles.itemMeta}>
+              {item.calories ? `~${item.calories} cal` : ''}
+              {item.calories && item.allergens && item.allergens.length > 0 ? ' · ' : ''}
+              {item.allergens ? item.allergens.slice(0, 3).map(a => ALLERGEN_EMOJI[a] ?? a).join(' ') : ''}
+            </Text>
+          ) : null}
           <View style={[styles.reasonChip, { backgroundColor: reasonColor + '18', borderColor: reasonColor }]}>
             <Text style={[styles.reasonText, { color: reasonColor }]} numberOfLines={1}>
               {reasonLabel}
@@ -175,9 +186,10 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: '#fff', fontSize: 13, fontWeight: '700', lineHeight: 21 },
 
-  cardInfo: { padding: 8, gap: 3 },
+  cardInfo:  { padding: 8, gap: 3 },
   itemName:  { fontSize: 12, fontWeight: '700', color: COLORS.bistroBrown },
   itemPrice: { fontSize: 11, color: COLORS.bistroGold, fontWeight: '600' },
+  itemMeta:  { fontSize: 10, color: COLORS.medGray, marginTop: 1 },
   reasonChip: {
     borderWidth: 0.5, borderRadius: 6,
     paddingHorizontal: 5, paddingVertical: 2,
