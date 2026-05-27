@@ -6,6 +6,7 @@ import { MenuItem } from '../../types';
 import { useStore } from '../../store';
 import { COLORS } from '../../constants/theme';
 import { MENU_IMAGES } from '../../constants/menuImages';
+import { getCustomizationGroups } from '../../utils/customizations';
 import * as Haptics from 'expo-haptics';
 
 interface MenuCardProps {
@@ -23,20 +24,39 @@ const DIET_COLOR: Record<string, { bg: string; text: string }> = {
 };
 
 export default function MenuCard({ item, index = 0 }: MenuCardProps) {
-  const addItem        = useStore(s => s.addItem);
-  const updateQuantity = useStore(s => s.updateQuantity);
-  const cartItems      = useStore(s => s.items);
-  const toggleLike     = useStore(s => s.toggleLike);
-  const isLiked        = useStore(s => s.isLiked(item.id));
+  const addItem           = useStore(s => s.addItem);
+  const addLine           = useStore(s => s.addLine);
+  const updateQuantity    = useStore(s => s.updateQuantity);
+  const cartItems         = useStore(s => s.items);
+  const toggleLike        = useStore(s => s.toggleLike);
+  const isLiked           = useStore(s => s.isLiked(item.id));
+  const openCustomize     = useStore(s => s.openCustomize);
+  const getLinesByMenuItem = useStore(s => s.getLinesByMenuItem);
 
-  const qty    = cartItems.find(i => i.menuItem.id === item.id)?.quantity ?? 0;
-  const photo  = MENU_IMAGES[item.id];
+  const qty         = cartItems.filter(i => i.menuItem.id === item.id).reduce((s, i) => s + i.quantity, 0);
+  const hasGroups   = getCustomizationGroups(item.id).length > 0;
+  const photo       = MENU_IMAGES[item.id];
   const dietaryTags = (item.tags ?? item.dietary ?? []).slice(0, 2);
 
-  const handleAdd      = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); addItem(item, 1); };
+  const handleAdd = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (hasGroups) {
+      // Create line first then open customize sheet
+      const lineId = addLine(item);
+      openCustomize(lineId);
+    } else {
+      addItem(item, 1);
+    }
+  };
   const handleIncrease = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); updateQuantity(item.id, qty + 1); };
   const handleDecrease = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); updateQuantity(item.id, qty - 1); };
   const handleLike     = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleLike(item); };
+
+  const handleCustomise = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const lines = getLinesByMenuItem(item.id);
+    if (lines.length > 0) openCustomize(lines[lines.length - 1].lineId);
+  };
 
   return (
     <Animated.View
@@ -92,14 +112,25 @@ export default function MenuCard({ item, index = 0 }: MenuCardProps) {
               </View>
             </TouchableOpacity>
           ) : (
-            <View style={styles.qtyRow}>
-              <TouchableOpacity style={styles.qtyBtn} onPress={handleDecrease} activeOpacity={0.7}>
-                <Text style={styles.qtyBtnText}>−</Text>
-              </TouchableOpacity>
-              <Text style={styles.qtyNum}>{qty}</Text>
-              <TouchableOpacity style={styles.qtyBtn} onPress={handleIncrease} activeOpacity={0.7}>
-                <Text style={styles.qtyBtnText}>+</Text>
-              </TouchableOpacity>
+            <View style={styles.qtyBlock}>
+              {hasGroups && (
+                <TouchableOpacity
+                  onPress={handleCustomise}
+                  style={styles.customiseBtn}
+                  accessibilityLabel={`Customise ${item.name}`}
+                >
+                  <Text style={styles.customiseBtnText}>✦ Customise</Text>
+                </TouchableOpacity>
+              )}
+              <View style={styles.qtyRow}>
+                <TouchableOpacity style={styles.qtyBtn} onPress={handleDecrease} activeOpacity={0.7}>
+                  <Text style={styles.qtyBtnText}>−</Text>
+                </TouchableOpacity>
+                <Text style={styles.qtyNum}>{qty}</Text>
+                <TouchableOpacity style={styles.qtyBtn} onPress={handleIncrease} activeOpacity={0.7}>
+                  <Text style={styles.qtyBtnText}>+</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </View>
@@ -166,8 +197,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.22, shadowRadius: 5, elevation: 3,
   },
+  qtyBlock:   { alignItems: 'flex-end', gap: 6 },
   qtyRow:     { flexDirection: 'row', alignItems: 'center', gap: 6 },
   qtyBtn:     { width: 28, height: 28, borderRadius: 14, borderWidth: 0.5, borderColor: COLORS.border, backgroundColor: COLORS.bistroCream2, alignItems: 'center', justifyContent: 'center' },
   qtyBtnText: { fontSize: 16, color: COLORS.bistroBrown, lineHeight: 20 },
   qtyNum:     { fontSize: 13, fontWeight: '600', minWidth: 18, textAlign: 'center', color: COLORS.bistroBrown },
+  customiseBtn: {
+    backgroundColor: COLORS.bistroGold,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    alignSelf: 'flex-end',
+  },
+  customiseBtnText: {
+    fontSize: 10,
+    color: COLORS.white,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
 });

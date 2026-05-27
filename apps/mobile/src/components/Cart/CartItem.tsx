@@ -84,7 +84,7 @@ export default function CartItem({ item }: { item: CartItemType }) {
             accessibilityRole="button"
             accessibilityLabel={`Customise ${item.menuItem.name}`}
           >
-            <Text style={styles.customiseBtnText}>⚙ Customise</Text>
+            <Text style={styles.customiseBtnText}>✦ Customise</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity onPress={toggleNote} style={styles.noteTrigger}>
@@ -168,11 +168,18 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginLeft: 4,
   },
-  customiseBtn: { alignSelf: 'flex-start' },
+  customiseBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.bistroGold,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
   customiseBtnText: {
     fontSize: 11,
-    color: COLORS.bistroAccent,
-    fontWeight: '600',
+    color: COLORS.white,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   noteTrigger: { alignSelf: 'flex-start' },
   noteTriggerText: {

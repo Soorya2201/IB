@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
-  StyleSheet, SafeAreaView, Animated,
+  StyleSheet, SafeAreaView, Animated, Modal,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '../../store';
@@ -65,67 +65,64 @@ export default function CustomizeSheet() {
   const updateLineCustomizations = useStore(s => s.updateLineCustomizations);
 
   const slideAnim = useRef(new Animated.Value(-600)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
 
   const line     = items.find(i => i.lineId === activeLineId);
   const itemId   = line?.menuItem.id ?? '';
   const groups   = getCustomizationGroups(itemId);
 
   const [localSelections, setLocalSelections] = useState<Record<string, string[]>>({});
+  const [visible, setVisible] = useState(false);
+
+  // Show/hide Modal based on activeLineId
+  useEffect(() => {
+    if (activeLineId) {
+      setVisible(true);
+    }
+  }, [activeLineId]);
 
   // Initialise local state from cart line or defaults whenever the sheet opens
   useEffect(() => {
-    if (!activeLineId) return;
+    if (!activeLineId || !visible) return;
     const source = line?.customizations ?? getDefaultCustomizations(itemId);
     const map: Record<string, string[]> = {};
     for (const c of source) {
       map[c.groupId] = [...c.selectedOptionIds];
     }
-    // Ensure every group has an entry
     for (const g of groups) {
       if (!map[g.id]) map[g.id] = [...g.defaultIds];
     }
     setLocalSelections(map);
-  }, [activeLineId]);
 
-  // Slide down from top on open
-  useEffect(() => {
-    if (activeLineId) {
-      Animated.parallel([
-        Animated.spring(slideAnim, { toValue: 0, tension: 80, friction: 10, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(slideAnim, { toValue: -600, duration: 250, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [activeLineId]);
+    // Animate in
+    slideAnim.setValue(-600);
+    Animated.spring(slideAnim, { toValue: 0, tension: 80, friction: 10, useNativeDriver: true }).start();
+  }, [activeLineId, visible]);
 
-  if (!activeLineId) return null;
+  const handleClose = () => {
+    Animated.timing(slideAnim, { toValue: -600, duration: 250, useNativeDriver: true }).start(() => {
+      setVisible(false);
+      closeCustomize();
+    });
+  };
 
   const handleToggle = (groupId: string, optionId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLocalSelections(prev => {
-      const group     = groups.find(g => g.id === groupId);
+      const group = groups.find(g => g.id === groupId);
       if (!group) return prev;
-      const current   = prev[groupId] ?? [];
+      const current    = prev[groupId] ?? [];
       const isSelected = current.includes(optionId);
 
       if (group.type === 'single') {
         return { ...prev, [groupId]: isSelected ? [] : [optionId] };
       }
-
-      // multi
       if (isSelected) {
         const minPicks = group.minPicks ?? 0;
-        if (current.length <= minPicks) return prev; // enforce min
+        if (current.length <= minPicks) return prev;
         return { ...prev, [groupId]: current.filter(id => id !== optionId) };
       }
       const maxPicks = group.maxPicks ?? Infinity;
       if (current.length >= maxPicks) {
-        // Replace oldest selection
         return { ...prev, [groupId]: [...current.slice(1), optionId] };
       }
       return { ...prev, [groupId]: [...current, optionId] };
@@ -137,9 +134,9 @@ export default function CustomizeSheet() {
       groupId: g.id,
       selectedOptionIds: localSelections[g.id] ?? g.defaultIds,
     }));
-    updateLineCustomizations(activeLineId, customs);
+    if (activeLineId) updateLineCustomizations(activeLineId, customs);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    closeCustomize();
+    handleClose();
   };
 
   const currentCustoms: CartLineCustomization[] = groups.map(g => ({
@@ -149,61 +146,71 @@ export default function CustomizeSheet() {
   const priceDelta = calculatePriceDelta(itemId, currentCustoms);
 
   return (
-    <Animated.View style={[styles.wrapper, { opacity: opacityAnim }]}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={closeCustomize} />
-      <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
-        <SafeAreaView style={styles.inner}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={handleClose}
+    >
+      <View style={styles.overlay}>
+        {/* Tappable backdrop */}
+        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
 
-          {/* Header */}
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.title}>Customise</Text>
-              {line && <Text style={styles.subtitle}>{line.menuItem.name}</Text>}
+        {/* Sheet slides in from top */}
+        <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
+          <SafeAreaView style={styles.inner}>
+
+            {/* Header */}
+            <View style={styles.header}>
+              <View>
+                <Text style={styles.title}>Customise</Text>
+                {line && <Text style={styles.subtitle}>{line.menuItem.name}</Text>}
+              </View>
+              <TouchableOpacity onPress={handleClose} style={styles.closeBtn} accessibilityLabel="Close">
+                <Text style={styles.closeText}>✕</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={closeCustomize} style={styles.closeBtn} accessibilityLabel="Close">
-              <Text style={styles.closeText}>✕</Text>
-            </TouchableOpacity>
-          </View>
 
-          {/* Option groups */}
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {groups.map(group => (
-              <GroupRow
-                key={group.id}
-                group={group}
-                selections={localSelections[group.id] ?? group.defaultIds}
-                onToggle={handleToggle}
-              />
-            ))}
-          </ScrollView>
+            {/* Option groups */}
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {groups.map(group => (
+                <GroupRow
+                  key={group.id}
+                  group={group}
+                  selections={localSelections[group.id] ?? group.defaultIds}
+                  onToggle={handleToggle}
+                />
+              ))}
+            </ScrollView>
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.doneBtn} onPress={handleDone} accessibilityRole="button">
-              <Text style={styles.doneBtnText}>
-                Done{priceDelta > 0 ? `  +$${priceDelta.toFixed(2)}` : ''}
-              </Text>
-            </TouchableOpacity>
-          </View>
+            {/* Footer */}
+            <View style={styles.footer}>
+              <TouchableOpacity style={styles.doneBtn} onPress={handleDone} accessibilityRole="button">
+                <Text style={styles.doneBtnText}>
+                  Done{priceDelta > 0 ? `  +$${priceDelta.toFixed(2)}` : ''}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-        </SafeAreaView>
-      </Animated.View>
-    </Animated.View>
+          </SafeAreaView>
+        </Animated.View>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 200,
+  overlay: {
+    flex: 1,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   sheet: {
     position: 'absolute',
@@ -216,9 +223,9 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: RADIUS.xl,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 12,
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    elevation: 20,
   },
   inner: { flex: 1 },
 
